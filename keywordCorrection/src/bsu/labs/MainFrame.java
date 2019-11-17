@@ -7,13 +7,13 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 
-public class MainFrame extends JFrame {
+class MainFrame extends JFrame {
     private File dictionary = new File("D:\\Универ\\3 курс\\5 семестр\\Java\\keywordCorrection\\src\\res\\dictionary.txt");
     private File inputText;
-    private ArrayList<String> dictionaryList;
+    private HashMap<String, String> dictionaryMap;
     {
-        dictionaryList = new ArrayList<>();
-        dictionaryList = fileToList(dictionary);
+        dictionaryMap = new HashMap<>();
+        dictionaryMap = fileToMap(dictionary);
 
     }
     private List<String> textList = new ArrayList<>();
@@ -21,6 +21,7 @@ public class MainFrame extends JFrame {
     private boolean isFileOpen = false;
     private JFileChooser fileChooser = new JFileChooser("D:\\Универ\\3 курс\\5 семестр\\Java\\keywordCorrection\\src\\res");
     private JTextArea textArea = new JTextArea();
+    private boolean stringBorderFlag = false;
     MainFrame(){
         super();
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -51,7 +52,7 @@ public class MainFrame extends JFrame {
                 }
             }
         });
-        this.setSize(600, 300);
+        this.setSize(600, 450);
         this.setLayout(new BorderLayout());
         JButton fixButton = new JButton("Check");
         JButton saveButton = new JButton("Save Changes");
@@ -89,35 +90,22 @@ public class MainFrame extends JFrame {
             }
         });
 
-
-        saveButton.addActionListener(e -> {
-            if(isFileOpen) {
-                writeToFile(textArea.getText(), inputText);
-                isSaved = true;
-            } else{
-                if(fileChooser.showSaveDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION) {
-                    writeToFile(textArea.getText(), fileChooser.getSelectedFile());
-                }
-            }
-                }
+        saveButton.addActionListener(this::actionPerformed
         );
 
-        fixButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                textList = stringToList(textArea.getText());
-                fixKeywords(textArea);
-                isSaved = false;
-            }
+        fixButton.addActionListener(e -> {
+            textList = stringToList(textArea.getText());
+            fixKeywords(textArea);
+            isSaved = false;
         });
 
         this.setVisible(true);
     }
 
-    void readFromFile(File file, JTextArea textArea){
+    private void readFromFile(File file, JTextArea textArea){
         try{
         BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
-        String s = "";
+        String s;
         while((s = bufferedReader.readLine())!= null){
             textArea.append(s);
             textArea.append(String.valueOf('\n'));
@@ -131,13 +119,18 @@ public class MainFrame extends JFrame {
 
     }
 
-    ArrayList<String> fileToList(File file){
-        ArrayList<String> list = new ArrayList<>();
+    private HashMap<String, String> fileToMap(File file){
+        HashMap<String, String> map = new HashMap<>();
         try{
             BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
-            String s = "";
+            String s;
             while((s = bufferedReader.readLine())!=null){
-              list.addAll(Arrays.asList(s.split(" ")));
+                for(String key: s.split(" ")) {
+                    String stringBuffer = "^(?i)"+
+                            key +
+                            "$";
+                    map.put(key, stringBuffer);
+                }
             }
         } catch (FileNotFoundException ex){
             JOptionPane.showMessageDialog(MainFrame.this, "File doesn't exist!");
@@ -146,10 +139,10 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(MainFrame.this, "Can not read the file");
             return null;
         }
-        return list;
+        return map;
     }
 
-    List<String> stringToList(String strArray){
+    private List<String> stringToList(String strArray){
         List<String> list = new ArrayList<>();
         StringTokenizer tokenizer = new StringTokenizer(strArray, "., ?!:\n\t\r{}()");
         while(tokenizer.hasMoreTokens()){
@@ -158,22 +151,30 @@ public class MainFrame extends JFrame {
         return list;
     }
 
-    void fixKeywords(JTextArea textArea){
+    private void fixKeywords(JTextArea textArea){
         for(String value: textList) {
-            if (dictionaryList.contains(value.toLowerCase())){
-                        correctInTextArea(value, value.toLowerCase(), textArea);
+            if(value.equals("\"")){
+                stringBorderFlag = !stringBorderFlag;
+            }
+            if(stringBorderFlag) continue;
+            else {
+                for (String key : dictionaryMap.keySet()) {
+                    if (value.matches(dictionaryMap.get(key))) {
+                        correctInTextArea(value, key, textArea);
+                    }
+                }
             }
         }
         JOptionPane.showMessageDialog(MainFrame.this, "Fixing completed");
     }
 
 
-    void correctInTextArea(String oldWord, String newWord, JTextArea textArea){
+    private void correctInTextArea(String oldWord, String newWord, JTextArea textArea){
         String text = textArea.getText();
-        textArea.setText(text.replace(oldWord, newWord));
+        textArea.setText(text.replaceFirst(oldWord, newWord));
     }
 
-    void writeToFile(String text, File file){
+    private void writeToFile(String text, File file){
         try{
             PrintWriter printWriter = new PrintWriter(new BufferedWriter(new FileWriter(file)));
             printWriter.print(text);
@@ -182,5 +183,18 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(MainFrame.this, "Can not write changes!");
         }
     }
+
+    private void actionPerformed(ActionEvent e) {
+        if (isFileOpen) {
+            writeToFile(textArea.getText(), inputText);
+            isSaved = true;
+        } else {
+            if (fileChooser.showSaveDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION) {
+                writeToFile(textArea.getText(), fileChooser.getSelectedFile());
+            }
+        }
+    }
 }
+
+
 
