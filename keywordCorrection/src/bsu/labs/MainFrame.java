@@ -5,7 +5,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.*;
-import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class MainFrame extends JFrame {
     private File dictionary = new File("D:\\Универ\\3 курс\\5 семестр\\Java\\keywordCorrection\\src\\res\\dictionary.txt");
@@ -16,12 +17,10 @@ class MainFrame extends JFrame {
         dictionaryMap = fileToMap(dictionary);
 
     }
-    private List<String> textList = new ArrayList<>();
     private boolean isSaved = false;
     private boolean isFileOpen = false;
     private JFileChooser fileChooser = new JFileChooser("D:\\Универ\\3 курс\\5 семестр\\Java\\keywordCorrection\\src\\res");
     private JTextArea textArea = new JTextArea();
-    private boolean stringBorderFlag = false;
     MainFrame(){
         super();
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -94,7 +93,6 @@ class MainFrame extends JFrame {
         );
 
         fixButton.addActionListener(e -> {
-            textList = stringToList(textArea.getText());
             fixKeywords(textArea);
             isSaved = false;
         });
@@ -126,9 +124,9 @@ class MainFrame extends JFrame {
             String s;
             while((s = bufferedReader.readLine())!=null){
                 for(String key: s.split(" ")) {
-                    String stringBuffer = "^(?i)"+
+                    String stringBuffer = "(?i)"+
                             key +
-                            "$";
+                            "(?=[^\"]*(?:\"[^\"]*\"[^\"]*)*\\z)";
                     map.put(key, stringBuffer);
                 }
             }
@@ -142,36 +140,18 @@ class MainFrame extends JFrame {
         return map;
     }
 
-    private List<String> stringToList(String strArray){
-        List<String> list = new ArrayList<>();
-        StringTokenizer tokenizer = new StringTokenizer(strArray, "., ?!:\n\t\r{}()");
-        while(tokenizer.hasMoreTokens()){
-            list.add(tokenizer.nextToken());
-        }
-        return list;
-    }
-
     private void fixKeywords(JTextArea textArea){
-        for(String value: textList) {
-            if(value.equals("\"")){
-                stringBorderFlag = !stringBorderFlag;
-            }
-            if(stringBorderFlag) continue;
-            else {
                 for (String key : dictionaryMap.keySet()) {
-                    if (value.matches(dictionaryMap.get(key))) {
-                        correctInTextArea(value, key, textArea);
+                    Pattern p = Pattern.compile(dictionaryMap.get(key));
+                    Matcher m = p.matcher(textArea.getText());
+                    StringBuffer sb = new StringBuffer();
+                    while (m.find()) {
+                        m.appendReplacement(sb, key);
                     }
-                }
+                    m.appendTail(sb);
+                    textArea.setText(sb.toString());
             }
-        }
         JOptionPane.showMessageDialog(MainFrame.this, "Fixing completed");
-    }
-
-
-    private void correctInTextArea(String oldWord, String newWord, JTextArea textArea){
-        String text = textArea.getText();
-        textArea.setText(text.replaceFirst(oldWord, newWord));
     }
 
     private void writeToFile(String text, File file){
